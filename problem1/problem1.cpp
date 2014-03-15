@@ -93,26 +93,33 @@ void insert(node * A,node * B){
 	B->next=A->next;
 	A->next=B;
 }
-//插入排序，并合并同次数节点。
-void insert_and_sort(node * head,node * new_node,bool add_once=false){
+//插入排序，可以连续插入一整个有序链表，合并同次数节点。
+void insert_and_sort(node * head,node * new_node){
+	//检测头结点，如果存在则跳过。
 	if(new_node->exp==EXP_HEAD_NODE)new_node=new_node->next;
+	//节点指针。
 	node * i=head->next;
+	//保留节点指针的前驱。
 	node * i_prev=head;
+
 	while(new_node){
+		//向后寻找插入点
 		while(i &&(i->exp)>(new_node->exp)){
 			i_prev=i;
 			i=i->next;
 		}
+		//如果系数相同则合并。
 		if(i && (i->exp==new_node->exp)){
 			i->factor+=new_node->factor;
 			if(i->factor==0)remove_next(i_prev);
 			i=i_prev->next;
+		//否则插入。
 		}else{
 			node * tmp=nodecpy(new_node);
 			insert(i_prev,tmp);
 			i=i_prev->next;
 		}
-		if(add_once)return;
+		//继续插入下一个节点。
 		new_node=new_node->next;
 	}
 }
@@ -152,12 +159,14 @@ public:
     Polynomial operator + (const Polynomial & B){
 		Polynomial new_poly;
 		new_poly.items=nodescpy(B.items);
+		//用插入排序直接合并两个链表。
 		insert_and_sort(new_poly.items,items);
 		return new_poly;
 	}
 	Polynomial operator - (const Polynomial & B){
 		Polynomial new_poly;
 		new_poly.items=nodescpyNegation(B.items);
+		//取负数后合并。同理
 		insert_and_sort(new_poly.items,items);
 		return new_poly;
 	}
@@ -189,10 +198,12 @@ public:
 			if(i->exp==EXP_HEAD_NODE)continue;
 			for(j=B.items;j;j=j->next){
 				if(j->exp==EXP_HEAD_NODE)continue;
+				//构造各项相乘的结果项。
 				node * node_multiply=new node;
 				node_multiply->exp=i->exp+j->exp;
 				node_multiply->factor=i->factor*j->factor;
 				node_multiply->next=NULL;
+				//结果项用插入排序并入总结果多项式。
 				insert_and_sort(new_poly.items,node_multiply);
 			}
 		}
@@ -203,11 +214,17 @@ public:
 		result.init();
 		Polynomial tmp(*this);
 		do{
+			//获取最高次项的指数差。
 			int exp_diff=tmp.getLeadingItem()->exp-B.getLeadingItem()->exp;
+			//获取最高次项的系数倍数。
 			double factor_scale=B.getLeadingItem()->factor/tmp.getLeadingItem()->factor;
+			//消去最高次项，并把中间结果记录下来。
 			result=result+Polynomial(new_node(1/factor_scale,exp_diff));
+			//取出余项，继续运算。
 			tmp=(tmp)-((B)^exp_diff)/factor_scale;
+			//直到没有余项，或余项的最高次数小于除数的最高次数。
 		}while(tmp.getLeadingItem() && tmp.getLeadingItem()->exp>=B.getLeadingItem()->exp);
+		//返回商与余数。
 		remained_item=tmp;
 
 	}
@@ -279,32 +296,31 @@ void diff(ofstream & out,Polynomial & A,Polynomial & B){
 	B_diff.output(out);
 }
 int main(){
-	Polynomial poly1,poly2,poly3,poly4;
-	ifstream in("infile.txt");
-	ofstream out("outfile.txt");
+	Polynomial poly1,poly2;
+	ifstream in("inputfile.txt");
+	ofstream out("outputfile.txt");
 	poly1.input(in);
 	poly2.input(in);
+	
 	char str[10];
 	in.getline(str,10,'(');
+	in.close();
 	if(strcmp(str,"AND")==0){
-		poly3=poly1+poly2;
+		(poly1+poly2).output(out);
 	}
 	if(strcmp(str,"SUB")==0){
-		poly3=poly1-poly2;
+		(poly1-poly2).output(out);
 	}
 	if(strcmp(str,"MUL")==0){
-		poly3=poly1*poly2;
+		(poly1*poly2).output(out);
 	}
 	if(strcmp(str,"DIV")==0){
-		poly3=poly1/poly2;
-		poly3.output(out);
-		poly3=poly1%poly2;
-		if(poly3.getLeadingItem())out<<"remainder:";		
+		//输出商和余数
+		(poly1/poly2).output(out);
+		(poly1%poly2).output(out);	
 	}
 	if(strcmp(str,"DIFF")==0){
 		diff(out,poly1,poly2);
-	}else{
-		poly3.output(out);
 	}
-		out.close();
+	out.close();
 }
